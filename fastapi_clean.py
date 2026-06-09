@@ -4,7 +4,10 @@ Two modes: Research Only | Research + Podcast (Pipeline)
 """
 
 import asyncio
+import logging
+import os
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -20,8 +23,19 @@ for _stream in (sys.stdout, sys.stderr):
 from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent / ".env")
 
-from fastapi import BackgroundTasks, FastAPI, HTTPException
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+
+# ── Logging setup ────────────────────────────────────────────────────────────
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger("orchestrator")
 
 sys.path.insert(0, str(Path(__file__).parent))
 from a2a_protocol import AgentCard, TaskStatus, a2a
@@ -57,8 +71,63 @@ class TaskResponse(BaseModel):
 # APP
 # ============================================================================
 
-app = FastAPI(title="Research & Podcast Agent API", version="1.0.0", docs_url="/docs")
+app = FastAPI(
+    title="Research & Podcast Agent API",
+    version="1.0.0",
+    docs_url="/docs",
+    description="A2A multi-agent pipeline: web research → PDF report → dual-voice podcast",
+)
 startup_time = datetime.utcnow()
+
+# ============================================================================
+# MIDDLEWARE
+# ============================================================================
+
+# 1. CORS — allow Streamlit UI (any origin) and EC2 public IP to call this API
+#    On EC2: set ALLOWED_ORIGINS=https://yourdomain.com in .env for production
+_raw_origins = os.getenv("ALLOWED_ORIGINS", "*")
+ALLOWED_ORIGINS = [o.strip() for o in _raw_origins.split(",")] if _raw_origins != "*" else ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# 2. Trusted Hosts — prevent HTTP Host header attacks on EC2
+#    On EC2: set ALLOWED_HOSTS=your-ec2-public-ip,yourdomain.com in .env
+_raw_hosts = os.getenv("ALLOWED_HOSTS", "*")
+ALLOWED_HOSTS = [h.strip() for h in _raw_hosts.split(",")] if _raw_hosts != "*" else ["*"]
+
+if ALLOWED_HOSTS != ["*"]:
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=ALLOWED_HOSTS)
+
+# 3. Request Logging — logs every request with method, path, status, duration
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start = time.time()
+    try:
+        response = await call_next(request)
+    except Exception as exc:
+        logger.error(f"Unhandled error: {exc}")
+        return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+    duration_ms = (time.time() - start) * 1000
+    logger.info(
+        f"{request.method} {request.url.path} → {response.status_code} "
+        f"({duration_ms:.1f}ms) | client={request.client.host if request.client else 'unknown'}"
+    )
+    return response
+
+# 4. Global Exception Handler — returns clean JSON instead of crash on EC2
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Unhandled exception on {request.url.path}: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "An internal error occurred. Check server logs."},
+    )
 
 
 @app.on_event("startup")
@@ -130,9 +199,14 @@ async def run_podcast(task_id: str, report_content: str, topic: str) -> dict:
         podcast_dir = str(Path(__file__).parent / "Podcast_agent")
 
         def _sync_podcast():
-            # Import must happen inside thread fn because graph.py uses relative imports
+            # Ensure Podcast_agent/ is on sys.path before import
             if podcast_dir not in sys.path:
                 sys.path.insert(0, podcast_dir)
+
+            # Clear stale cached modules so re-imports always use correct path
+            for mod in ["graph_fixed", "state", "tools", "config"]:
+                sys.modules.pop(mod, None)
+
             from graph_fixed import Pipeline
 
             state = {
@@ -176,12 +250,15 @@ async def run_podcast(task_id: str, report_content: str, topic: str) -> dict:
 @app.get("/health")
 async def health():
     agent_count = len(a2a.list_agents())
+    uptime = (datetime.utcnow() - startup_time).total_seconds()
     return {
         "status": "ok",
-        "agents": agent_count,
+        "version": "1.0.0",
         "agents_registered": agent_count,
-        "tasks": len(a2a.tasks),
-        "uptime_seconds": (datetime.utcnow() - startup_time).total_seconds(),
+        "tasks_total": len(a2a.tasks),
+        "uptime_seconds": round(uptime, 1),
+        "uptime_human": f"{int(uptime // 3600)}h {int((uptime % 3600) // 60)}m {int(uptime % 60)}s",
+        "environment": os.getenv("APP_ENV", "development"),
     }
 
 
@@ -325,23 +402,63 @@ async def list_tasks():
 # ============================================================================
 
 if __name__ == "__main__":
-    import uvicorn, socket, subprocess, os as _os
-    _PORT = 8000
+    import uvicorn, socket, subprocess
+
+    # ── Config (override via .env or environment variables on EC2) ──────────
+    HOST  = os.getenv("HOST", "0.0.0.0")           # 0.0.0.0 = accept all IPs
+    PORT  = int(os.getenv("PORT", "8000"))
+    WORKERS = int(os.getenv("WORKERS", "1"))        # increase on EC2 if needed
+    ENV   = os.getenv("APP_ENV", "development")
+
+    # ── Auto-kill stale process on same port (Windows + Linux) ──────────────
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as _s:
-        if _s.connect_ex(("127.0.0.1", _PORT)) == 0:
-            print(f"[STARTUP] Port {_PORT} in use — killing stale process...")
+        if _s.connect_ex(("127.0.0.1", PORT)) == 0:
+            logger.warning(f"[STARTUP] Port {PORT} in use — killing stale process...")
             try:
-                out = subprocess.check_output(
-                    f"netstat -ano | findstr :{_PORT}", shell=True
-                ).decode()
-                for line in out.strip().splitlines():
-                    parts = line.split()
-                    if len(parts) >= 5 and f":{_PORT}" in parts[1]:
-                        pid = int(parts[-1])
-                        if pid != _os.getpid():
-                            subprocess.call(f"taskkill /PID {pid} /F", shell=True)
-                            print(f"[STARTUP] Killed PID {pid}")
-                            break
+                # Windows
+                if sys.platform == "win32":
+                    out = subprocess.check_output(
+                        f"netstat -ano | findstr :{PORT}", shell=True
+                    ).decode()
+                    for line in out.strip().splitlines():
+                        parts = line.split()
+                        if len(parts) >= 5 and f":{PORT}" in parts[1]:
+                            pid = int(parts[-1])
+                            if pid != os.getpid():
+                                subprocess.call(f"taskkill /PID {pid} /F", shell=True)
+                                logger.info(f"[STARTUP] Killed PID {pid}")
+                                break
+                # Linux / EC2
+                else:
+                    out = subprocess.check_output(
+                        f"lsof -ti :{PORT}", shell=True
+                    ).decode().strip()
+                    for pid_str in out.splitlines():
+                        pid = int(pid_str)
+                        if pid != os.getpid():
+                            subprocess.call(f"kill -9 {pid}", shell=True)
+                            logger.info(f"[STARTUP] Killed PID {pid}")
             except Exception as _e:
-                print(f"[STARTUP] Could not auto-kill: {_e} — free port {_PORT} manually")
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+                logger.warning(f"[STARTUP] Could not auto-kill: {_e} — free port {PORT} manually")
+
+    # ── Banner ───────────────────────────────────────────────────────────────
+    print("\n" + "=" * 65)
+    print("  RESEARCH & PODCAST ORCHESTRATOR")
+    print("=" * 65)
+    print(f"  Environment : {ENV}")
+    print(f"  Host        : {HOST}")
+    print(f"  Port        : {PORT}")
+    print(f"  Workers     : {WORKERS}")
+    print(f"  API Docs    : http://{HOST}:{PORT}/docs")
+    print(f"  Health      : http://{HOST}:{PORT}/health")
+    print(f"  CORS Origins: {ALLOWED_ORIGINS}")
+    print("=" * 65 + "\n")
+
+    uvicorn.run(
+        app,
+        host=HOST,
+        port=PORT,
+        workers=WORKERS,
+        log_level="info" if ENV == "production" else "debug",
+        access_log=True,
+    )

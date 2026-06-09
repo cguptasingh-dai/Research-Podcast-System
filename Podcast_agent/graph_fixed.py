@@ -7,6 +7,14 @@ Pipeline:
   extract_facts -> generate_qa -> validate_qa (RETRY if bad) -> synthesize_audio -> quality_check
 """
 
+import sys
+from pathlib import Path
+
+# Ensure Podcast_agent/ is always on sys.path regardless of how this file is imported
+_THIS_DIR = str(Path(__file__).parent.resolve())
+if _THIS_DIR not in sys.path:
+    sys.path.insert(0, _THIS_DIR)
+
 from langgraph.graph import StateGraph, END
 from state import ReportState
 from tools import (

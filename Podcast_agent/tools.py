@@ -14,9 +14,15 @@ Tools:
 
 import os
 import re
+import sys
 import wave
 from pathlib import Path
 from typing import Dict, List, Tuple, Any
+
+# Ensure Podcast_agent/ is always on sys.path regardless of how this file is imported
+_THIS_DIR = str(Path(__file__).parent.resolve())
+if _THIS_DIR not in sys.path:
+    sys.path.insert(0, _THIS_DIR)
 
 from langchain_core.tools import tool
 
