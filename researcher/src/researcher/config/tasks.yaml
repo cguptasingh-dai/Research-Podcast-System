@@ -1,0 +1,157 @@
+deep_research_task:
+  description: >
+    Research the topic "{topic}" using real web searches, then compile what you found.
+
+    HOW TO WORK (this is a step-by-step loop, NOT a batch):
+    - Call ONE tool at a time. Look at the result it returns BEFORE calling the next tool.
+    - Do NOT output a list/array of many tool calls at once — that fails. One call, observe, next call.
+    - Start by searching the topic name, then run follow-up searches to cover:
+      definition/what it is, how it works/features, use cases/applications,
+      challenges/limitations, recent news, and (for technical topics) GitHub repos.
+    - After a search returns results, pick the most relevant URLs THAT APPEAR IN THOSE
+      RESULTS and scrape them for full content.
+
+    TOOLS AVAILABLE (use the names exactly):
+    - SerperDevTool        : Google search (best for definitions, news, stats)
+    - EXASearchTool        : neural/semantic search (good for concepts)
+    - ScrapeWebsiteTool    : read full text of a URL that you got from a search result
+    - GithubRepoSearchTool : find public repos for the topic and read their README
+
+    ABSOLUTE ANTI-FABRICATION RULES (CRITICAL — breaking these ruins the report):
+    - NEVER invent, guess, or type a URL from memory. Only scrape URLs that a search
+      tool actually returned in its results this session.
+    - A URL is FORBIDDEN if it contains placeholders such as: XXXX, example.com,
+      example.ai, /12345, github.com/user/..., yourdomain, sample, placeholder.
+      If you are tempted to write such a URL, STOP — it means you have no real source.
+    - Use ONLY facts that appear in actual tool outputs. ZERO made-up content.
+    - NEVER invent percentages, CAGR, market size, revenue, dollar figures, or star counts.
+    - NEVER write "hypothetically", "speculative", "inferred", "potentially pertains",
+      or present guesses as findings.
+    - If, after several real searches, you genuinely find nothing about the topic,
+      say exactly: "No real data found for this topic." and list the queries you tried.
+      Do NOT fabricate a plausible-looking report.
+
+    OUTPUT FORMAT (include a section only if you have REAL data for it):
+    TOPIC: {topic}
+    DEFINITION: [what it is, from real sources]
+    KEY FACTS: [numbered list of real facts, each with the real source URL it came from]
+    MARKET DATA: [only if real figures were found — otherwise omit this line]
+    APPLICATIONS: [real use cases from sources]
+    CHALLENGES: [real challenges from sources]
+    GITHUB INSIGHTS: [only real repos actually returned by GithubRepoSearchTool]
+    SOURCES: [the real URLs you actually searched/scraped — no invented URLs]
+
+  expected_output: >
+    A research summary built ONLY from real tool results, one tool call at a time.
+    Every fact traces to a real search result or scraped page, and every URL in
+    SOURCES is a real URL returned by a tool (no placeholders like XXXX/example.com).
+    If nothing real was found, it says "No real data found for this topic." honestly
+    instead of inventing content.
+
+  agent: researchers
+
+report_writing_task:
+  description: >
+    Write a professional research report on {topic} using ONLY the research findings provided.
+
+    ABSOLUTE RULES — NEVER BREAK THESE:
+    - NEVER invent or estimate statistics, percentages, CAGR, market sizes, or dollar figures
+    - NEVER use words like "hypothetically", "speculative", "projected" for made-up numbers
+    - Use ONLY facts explicitly stated in the research findings
+    - OMIT empty sections: if a section has no real collected data, DROP the whole
+      section (heading and body). Do NOT write placeholders like "No data found",
+      "No market data found", or "not available". Only include sections you can fill
+      with real, collected facts.
+    - Do NOT pad with invented plausible-sounding content
+    - Start DIRECTLY with "# {topic}: Research Report" — no preamble
+
+    REPORT STRUCTURE (include REQUIRED sections always; include OPTIONAL sections
+    ONLY when the research findings contain real data for them — otherwise omit):
+
+    # {topic}: Research Report
+
+    ## Executive Summary        (REQUIRED)
+    [Summarize ONLY what was actually found — if limited, say so briefly]
+
+    ## What is {topic}?         (REQUIRED)
+    [Definition and context from real search results only]
+
+    ## Key Findings             (REQUIRED)
+    [Numbered list of real facts from research. Each fact references a source URL if available.
+    List as many real facts as were found.]
+
+    ## Market & Industry Data   (OPTIONAL — omit entirely if no real market figures found)
+    [ONLY real market figures from sources.]
+
+    ## Applications & Use Cases (OPTIONAL — omit entirely if no real use cases found)
+    [Real examples from sources.]
+
+    ## Challenges & Limitations (OPTIONAL — omit entirely if no real challenges found)
+    [Real challenges from sources.]
+
+    ## Conclusion               (REQUIRED)
+    [Honest summary: what was found and recommended next steps for research]
+
+    ## Sources                  (REQUIRED)
+    [All real URLs found. If none: "No source URLs found — topic may be obscure or private."]
+
+  expected_output: >
+    A complete professional report in markdown format starting directly with
+    "# {topic}: Research Report" - no preamble or meta-commentary.
+    Minimum 500 words. Uses proper prose paragraphs, not just bullet lists.
+
+  agent: report_writer
+  context: [deep_research_task]
+
+critique_task:
+  description: >
+    Evaluate the quality of the provided report across six critical dimensions.
+
+    Report to evaluate:
+    {report}
+
+    Assess the report on each dimension with a detailed evaluation:
+
+    1. CORRECTNESS (0-100): Are all facts and claims accurate? Are citations
+       properly sourced? Are there any unsupported claims or factual errors?
+
+    2. CLARITY (0-100): Is the writing clear and easy to follow? Are complex
+       concepts explained well? Is the structure logical and intuitive?
+
+    3. DEPTH (0-100): Is the analysis thorough? Are findings comprehensive?
+       Does it provide sufficient context and investigation?
+
+    4. ACTIONABILITY (0-100): Are recommendations specific and practical?
+       Can stakeholders take concrete action based on this report? Are next
+       steps clear?
+
+    5. ENGAGEMENT (0-100): Is the writing compelling and professional?
+       Does it maintain reader interest? Is the tone appropriate for
+       the audience?
+
+    6. SOURCE ATTRIBUTION (0-100): Are all claims properly cited? Are
+       sources authoritative? Is the bibliography complete and properly
+       formatted?
+
+    For each dimension, provide:
+    - A score (0-100) with brief justification
+    - 2-3 specific examples or issues
+    - Clear suggestions for improvement
+
+    Then provide an overall assessment and specific improvement suggestions.
+
+  expected_output: >
+    A detailed critique report including:
+    - CORRECTNESS score with analysis
+    - CLARITY score with analysis
+    - DEPTH score with analysis
+    - ACTIONABILITY score with analysis
+    - ENGAGEMENT score with analysis
+    - SOURCE ATTRIBUTION score with analysis
+    - Average score across all dimensions
+    - 3-5 priority areas for improvement
+    - Specific suggestions for next iteration
+    - XML tags: <score>X.X</score> and <suggestions>...</suggestions>
+
+  agent: critic
+  context: [report_writing_task]

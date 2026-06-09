@@ -1,0 +1,41 @@
+# Environment variables - NEVER commit these
+.env
+.env.local
+.env.*.local
+
+# Credentials and secrets
+*.key
+*.pem
+secrets/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# LangGraph persistence
+.langgraph_db
+.langgraph_db-shm
+.langgraph_db-wal
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Output directories (optional - remove if you want to version these)
+# results/
+# broadcasts/

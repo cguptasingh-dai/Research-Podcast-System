@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"from Broadcast_agent.agents.audio_sarvam import create_audio_sarvam; print\\('SUCCESS: audio_sarvam module loads correctly'\\)\")",
+      "Bash(timeout 120 python -c ' *)",
+      "Bash(grep -vE \"TOOLKIT|\\\\[OK\\\\]|\\\\[SKIP\\\\]|LLM\\\\]|^\\\\s*$\")",
+      "Bash(python -c ' *)",
+      "Bash(cd /c/Users/chandan.gupta/Desktop/A2a *)"
+    ]
+  },
+  "enabledMcpjsonServers": [
+    "code-review-graph"
+  ]
+}
