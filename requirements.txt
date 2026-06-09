@@ -1,36 +1,42 @@
 # ============================================================
-# A2A Research & Podcast System — Dependencies
-# Updated: 2026-06-09
-# Python: 3.10+
+# A2A Research & Podcast System — Requirements
+# Python 3.10+  |  Updated: 2026-06-09
 # ============================================================
 
 # ── Web Framework ────────────────────────────────────────────
 fastapi==0.136.0
 uvicorn==0.44.0
+starlette==1.0.0
 pydantic==2.12.5
 pydantic-settings==2.10.1
-python-multipart==0.0.9         # file uploads in FastAPI
+python-multipart==0.0.9
 
-# ── UI ───────────────────────────────────────────────────────
+# ── Streamlit UI ─────────────────────────────────────────────
 streamlit==1.56.0
 
-# ── LLM / AI ─────────────────────────────────────────────────
+# ── LangChain / LLM ──────────────────────────────────────────
 langchain==1.3.4
 langchain-core==1.4.0
 langchain-community==0.4.2
 langchain-nvidia-ai-endpoints==1.3.0
 langchain-text-splitters==1.1.2
+
+# ── LangGraph (Podcast pipeline) ─────────────────────────────
 langgraph==1.2.4
 langgraph-checkpoint==4.1.0
 langgraph-prebuilt==1.1.0
+
+# ── CrewAI (Research agent) ───────────────────────────────────
 crewai==1.14.4
 crewai-tools==1.14.4
 
-# ── HTTP / Web Scraping ───────────────────────────────────────
+# ── HTTP / Async ──────────────────────────────────────────────
 requests==2.33.1
 httpx==0.28.1
 aiohttp==3.13.5
 aiohttp-retry==2.9.1
+
+# ── Web Scraping ──────────────────────────────────────────────
 beautifulsoup4==4.13.5
 
 # ── PDF Generation ────────────────────────────────────────────
@@ -38,10 +44,9 @@ xhtml2pdf==0.2.17
 reportlab==4.5.1
 pillow==12.2.0
 
-# ── Environment & Config ─────────────────────────────────────
+# ── Environment ───────────────────────────────────────────────
 python-dotenv==1.2.2
 
 # ── Testing ───────────────────────────────────────────────────
 pytest==8.3.5
 pytest-asyncio==0.24.0
-httpx==0.28.1                   # used by TestClient
