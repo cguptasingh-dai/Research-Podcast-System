@@ -1,52 +1,67 @@
 # ============================================================
-# A2A Research & Podcast System — Requirements
-# Python 3.14+  |  Updated: 2026-06-10
+# A2A Research & Podcast System — Global Requirements
+# Python 3.11+  |  Updated: 2026-06-10
+# Covers: Orchestrator + Researcher + Podcast Agent + UI
 # Install: pip install -r requirements.txt
 # ============================================================
 
-# Web Framework
+# ── Web Framework ────────────────────────────────────────────
 fastapi
 uvicorn[standard]
+starlette
 pydantic
 pydantic-settings
 python-multipart
 
-# UI
+# ── Streamlit UI ─────────────────────────────────────────────
 streamlit
 
-# LangChain / LLM
+# ── LangChain / LLM ──────────────────────────────────────────
 langchain
 langchain-core
 langchain-community
 langchain-nvidia-ai-endpoints
 langchain-text-splitters
+langchain-openai
 
-# LangGraph
+# ── LangGraph (Podcast Pipeline) ─────────────────────────────
 langgraph
 langgraph-checkpoint
 langgraph-prebuilt
+langgraph-sdk
 
-# CrewAI
+# ── CrewAI (Research Agent) ───────────────────────────────────
 crewai
 crewai-tools
 
-# HTTP / Async
+# ── HTTP / Async ──────────────────────────────────────────────
 requests
 httpx
+httpx-sse
 aiohttp
 aiohttp-retry
 
-# Web Scraping
+# ── Web Scraping ──────────────────────────────────────────────
 beautifulsoup4
 
-# PDF
+# ── PDF Generation ────────────────────────────────────────────
 xhtml2pdf
 reportlab
 pillow
+pdfplumber
 
-# Environment
+# ── Audio ─────────────────────────────────────────────────────
+pydub
+gTTS
+
+# ── Environment & Config ─────────────────────────────────────
 python-dotenv
+pyyaml
 
-# Testing
+# ── Data ──────────────────────────────────────────────────────
+pandas
+numpy
+
+# ── Testing ───────────────────────────────────────────────────
 pytest
 pytest-asyncio

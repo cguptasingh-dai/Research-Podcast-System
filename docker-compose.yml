@@ -1,0 +1,126 @@
+version: "3.9"
+
+# ============================================================
+# A2A Research & Podcast System — Docker Compose
+# Services: orchestrator | researcher | podcast | streamlit-ui
+# Usage:
+#   docker-compose up --build          # build + start all
+#   docker-compose up -d               # detached mode
+#   docker-compose logs -f orchestrator
+#   docker-compose down
+# ============================================================
+
+services:
+
+  # ── Orchestrator (A2A Task Bus + Pipeline API) ──────────────
+  orchestrator:
+    build:
+      context: .
+      dockerfile: Dockerfile.orchestrator
+    container_name: a2a_orchestrator
+    restart: always
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - APP_ENV=production
+    volumes:
+      - ./Report:/app/Report
+      - ./podcasts:/app/podcasts
+    networks:
+      - a2a_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # ── Researcher Agent (CrewAI + LangChain LLM) ───────────────
+  researcher:
+    build:
+      context: .
+      dockerfile: Dockerfile.researcher
+    container_name: a2a_researcher
+    restart: always
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8001
+      - APP_ENV=production
+    volumes:
+      - ./Report:/app/Report
+    networks:
+      - a2a_network
+    depends_on:
+      orchestrator:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # ── Podcast Agent (LangGraph + Sarvam TTS) ──────────────────
+  podcast:
+    build:
+      context: .
+      dockerfile: Dockerfile.podcast
+    container_name: a2a_podcast
+    restart: always
+    ports:
+      - "8002:8002"
+    env_file:
+      - .env
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8002
+      - APP_ENV=production
+    volumes:
+      - ./podcasts:/app/podcasts
+    networks:
+      - a2a_network
+    depends_on:
+      orchestrator:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # ── Streamlit UI ─────────────────────────────────────────────
+  streamlit:
+    build:
+      context: .
+      dockerfile: Dockerfile.streamlit
+    container_name: a2a_streamlit
+    restart: always
+    ports:
+      - "8501:8501"
+    env_file:
+      - .env
+    environment:
+      - ORCHESTRATOR_URL=http://orchestrator:8000
+    volumes:
+      - ./Report:/app/Report
+      - ./podcasts:/app/podcasts
+    networks:
+      - a2a_network
+    depends_on:
+      - orchestrator
+      - researcher
+      - podcast
+
+# ── Shared network ───────────────────────────────────────────
+networks:
+  a2a_network:
+    driver: bridge

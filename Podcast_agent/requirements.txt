@@ -1,8 +1,0 @@
-langchain-nvidia-ai-endpoints>=0.1.0
-langgraph>=0.0.40
-gtts>=2.4.0
-pydub>=0.25.1
-python-dotenv>=1.0.0
-pdfplumber>=0.10.0
-crewai>=0.31.0
-crewai-tools>=0.1.0
