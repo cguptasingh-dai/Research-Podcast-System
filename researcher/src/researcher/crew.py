@@ -12,7 +12,10 @@ from dotenv import load_dotenv
 from pathlib import Path
 
 # Import shared configuration
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+# __file__ = researcher/src/researcher/crew.py → 4 parents up = project root (A2a/)
+_project_root = str(Path(__file__).parent.parent.parent.parent)
+if _project_root not in sys.path:
+    sys.path.insert(0, _project_root)
 from config_shared import APIConfig, LLMConfig
 
 load_dotenv()

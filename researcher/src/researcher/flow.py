@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from crewai.flow.flow import Flow, listen, router, start
 
 from researcher.crew import researcher
-from researcher.pdf_generator_enhanced import convert_report_to_pdf_enhanced
+from researcher.pdf_generator_professional import convert_report_to_pdf_professional
 
 
 class ReportState(BaseModel):

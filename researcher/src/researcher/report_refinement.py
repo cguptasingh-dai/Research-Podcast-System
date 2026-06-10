@@ -2,6 +2,7 @@ import os
 import re
 import time
 from datetime import datetime
+from pathlib import Path
 from typing import Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pydantic import BaseModel
@@ -9,6 +10,13 @@ from crewai import Agent, Task
 
 from .crew import researcher
 from .pdf_generator_professional import convert_report_to_pdf_professional
+
+# Absolute path to project root Report/ folder so PDFs always land there
+# regardless of the process working directory (critical for Docker / EC2)
+# __file__ = researcher/src/researcher/report_refinement.py
+# 4 levels up  = A2a/ (project root)
+_PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
+_DEFAULT_REPORT_DIR = str(_PROJECT_ROOT / "Report")
 
 
 class IterationResult(BaseModel):
@@ -1109,8 +1117,10 @@ End your response with XML tags:
         return [{'iteration': it.iteration, 'score': it.score, 'status': '✓ Best' if it == self.best_iteration else ''} 
                 for it in self.iterations]
 
-    def save_results(self, output_dir: str = "Report") -> dict:
-        """Save only PDF to Report folder."""
+    def save_results(self, output_dir: str = None) -> dict:
+        """Save only PDF to Report folder (always uses absolute path)."""
+        if output_dir is None:
+            output_dir = _DEFAULT_REPORT_DIR
         print(f"\n[SAVING] Generating PDF to {output_dir}/ folder...")
         os.makedirs(output_dir, exist_ok=True)
 

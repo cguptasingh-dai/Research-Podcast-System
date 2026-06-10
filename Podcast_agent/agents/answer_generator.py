@@ -4,7 +4,7 @@ Note: Q&A generation is now handled together in question_generator.py
 This file kept for backward compatibility.
 """
 
-from agents.question_generator import stream_llm
+from .question_generator import stream_llm
 
 
 def generate_answers(client, content: str, questions: list) -> str:
