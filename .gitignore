@@ -41,7 +41,19 @@ results/
 uploads/
 podcasts/
 broadcasts/
-knowledge/
+docs/
+
+# ============================================================
+# LOCK FILES & PACKAGE MANAGER ARTIFACTS
+# ============================================================
+uv.lock
+poetry.lock
+pyproject.toml
+
+# ============================================================
+# CODE REVIEW GRAPH (auto-generated tool cache)
+# ============================================================
+.code-review-graph/
 
 # ============================================================
 # JUPYTER / NOTEBOOKS
@@ -75,11 +87,6 @@ desktop.ini
 *.swp
 *.pid
 
-# ============================================================
-# LOCK FILES (keep pyproject.toml, ignore lock unless pinned)
-# ============================================================
-uv.lock
-poetry.lock
 
 # ============================================================
 # STREAMLIT
