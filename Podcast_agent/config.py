@@ -46,7 +46,6 @@ def get_llm():
     return client
 
 
-# Ensure output directories exist (relative to project root, not CWD)
+# Ensure podcast output directory exists at project root
 _project_root = Path(__file__).parent.parent
-for d in ["results", "podcasts", "uploads"]:
-    (_project_root / d).mkdir(exist_ok=True)
+(_project_root / "podcasts").mkdir(exist_ok=True)

@@ -4,6 +4,7 @@ PDF download, inline PDF viewer, audio playback and download.
 """
 
 import base64
+import os
 import time
 from datetime import datetime
 from pathlib import Path
@@ -15,7 +16,9 @@ import streamlit as st
 # CONFIG
 # ============================================================================
 
-API_URL = "http://localhost:8000"
+# In Docker: set ORCHESTRATOR_URL=http://orchestrator:8000 via docker-compose env
+# Locally:   defaults to localhost:8000
+API_URL = os.getenv("ORCHESTRATOR_URL", "http://localhost:8000")
 POLL_INTERVAL = 2
 MAX_POLL = 450  # 450 * 2 seconds = 900 seconds = 15 minutes (research can take 5-10 min)
 

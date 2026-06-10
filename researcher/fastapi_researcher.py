@@ -277,17 +277,28 @@ if __name__ == "__main__":
         if _s.connect_ex(("127.0.0.1", _PORT)) == 0:
             print(f"[STARTUP] Port {_PORT} in use — killing stale process...")
             try:
-                out = subprocess.check_output(
-                    f"netstat -ano | findstr :{_PORT}", shell=True
-                ).decode()
-                for line in out.strip().splitlines():
-                    parts = line.split()
-                    if len(parts) >= 5 and f":{_PORT}" in parts[1]:
-                        pid = int(parts[-1])
+                import sys as _sys
+                if _sys.platform == "win32":
+                    out = subprocess.check_output(
+                        f"netstat -ano | findstr :{_PORT}", shell=True
+                    ).decode()
+                    for line in out.strip().splitlines():
+                        parts = line.split()
+                        if len(parts) >= 5 and f":{_PORT}" in parts[1]:
+                            pid = int(parts[-1])
+                            if pid != _os.getpid():
+                                subprocess.call(f"taskkill /PID {pid} /F", shell=True)
+                                print(f"[STARTUP] Killed PID {pid}")
+                                break
+                else:  # Linux / EC2
+                    out = subprocess.check_output(
+                        f"lsof -ti :{_PORT}", shell=True
+                    ).decode().strip()
+                    for pid_str in out.splitlines():
+                        pid = int(pid_str)
                         if pid != _os.getpid():
-                            subprocess.call(f"taskkill /PID {pid} /F", shell=True)
+                            subprocess.call(f"kill -9 {pid}", shell=True)
                             print(f"[STARTUP] Killed PID {pid}")
-                            break
             except Exception as _e:
                 print(f"[STARTUP] Could not auto-kill: {_e} — free port {_PORT} manually")
 

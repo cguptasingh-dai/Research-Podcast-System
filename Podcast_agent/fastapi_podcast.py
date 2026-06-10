@@ -27,11 +27,14 @@ from dotenv import load_dotenv  # LOAD .ENV FILE
 # Load environment variables BEFORE anything else
 load_dotenv()
 
-# Add parent to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Add paths: root (for a2a_protocol, config_shared) + Podcast_agent/ (for graph_fixed, state, tools, config)
+_root_dir   = str(Path(__file__).parent.parent)   # A2a/
+_agent_dir  = str(Path(__file__).parent)           # A2a/Podcast_agent/
+if _root_dir  not in sys.path: sys.path.insert(0, _root_dir)
+if _agent_dir not in sys.path: sys.path.insert(0, _agent_dir)
 
 from a2a_protocol import a2a, AgentCard, TaskStatus
-from graph_fixed import Pipeline  # Using fixed version with fallback questions
+from graph_fixed import Pipeline  # graph_fixed.py lives in Podcast_agent/
 
 # Create Pipeline ONCE at module level (not per-request)
 # This avoids re-initializing LLM client and re-compiling graph every request
@@ -313,18 +316,28 @@ if __name__ == "__main__":
         if _s.connect_ex(("127.0.0.1", _PORT)) == 0:
             print(f"[STARTUP] Port {_PORT} in use — killing stale process...")
             try:
-                # netstat -ano gives: Proto LocalAddr ForeignAddr State PID
-                out = subprocess.check_output(
-                    f"netstat -ano | findstr :{_PORT}", shell=True
-                ).decode()
-                for line in out.strip().splitlines():
-                    parts = line.split()
-                    if len(parts) >= 5 and f":{_PORT}" in parts[1]:
-                        pid = int(parts[-1])
+                import sys as _sys
+                if _sys.platform == "win32":
+                    out = subprocess.check_output(
+                        f"netstat -ano | findstr :{_PORT}", shell=True
+                    ).decode()
+                    for line in out.strip().splitlines():
+                        parts = line.split()
+                        if len(parts) >= 5 and f":{_PORT}" in parts[1]:
+                            pid = int(parts[-1])
+                            if pid != _os.getpid():
+                                subprocess.call(f"taskkill /PID {pid} /F", shell=True)
+                                print(f"[STARTUP] Killed PID {pid}")
+                                break
+                else:  # Linux / EC2
+                    out = subprocess.check_output(
+                        f"lsof -ti :{_PORT}", shell=True
+                    ).decode().strip()
+                    for pid_str in out.splitlines():
+                        pid = int(pid_str)
                         if pid != _os.getpid():
-                            subprocess.call(f"taskkill /PID {pid} /F", shell=True)
+                            subprocess.call(f"kill -9 {pid}", shell=True)
                             print(f"[STARTUP] Killed PID {pid}")
-                            break
             except Exception as _e:
                 print(f"[STARTUP] Could not auto-kill: {_e} — free port {_PORT} manually")
 
