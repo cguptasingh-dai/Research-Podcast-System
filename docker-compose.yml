@@ -43,7 +43,7 @@ services:
   researcher:
     build:
       context: .
-      dockerfile: Dockerfile.researcher
+      dockerfile: researcher/Dockerfile
     container_name: a2a_researcher
     restart: always
     ports:
@@ -72,7 +72,7 @@ services:
   podcast:
     build:
       context: .
-      dockerfile: Dockerfile.podcast
+      dockerfile: Podcast_agent/Dockerfile
     container_name: a2a_podcast
     restart: always
     ports:
